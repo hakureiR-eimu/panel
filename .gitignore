@@ -1,0 +1,148 @@
+# ========================
+# 通用 / OS 相关
+# ========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.env
+.env.*
+!.env.example
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# 工具链
+.superpowers/
+.claude/
+
+# ========================
+# Python (backend-blog / backend-quant)
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 虚拟环境
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# 分发 / 打包
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+
+# 测试 / 覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+nosetests.xml
+
+# 类型检查
+.mypy_cache/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 日志
+*.log
+
+# ========================
+# Java (如有 Java 服务)
+# ========================
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradle/
+build/
+out/
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# ========================
+# 前端 (frontend)
+# ========================
+node_modules/
+bower_components/
+
+# 构建产物
+dist/
+.next/
+.nuxt/
+.output/
+.cache/
+.vuepress/dist/
+.serverless/
+
+# 框架专用
+.fumino/
+.npm
+.eslintcache
+.stylelintcache
+
+# 环境变量 (前端)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ========================
+# Docker
+# ========================
+# docker-compose.yml 通常需要提交，但本地覆盖可以忽略
+docker-compose.override.yml
+
+# ========================
+# 日志 & 临时文件
+# ========================
+logs/
+*.log
+tmp/
+temp/
