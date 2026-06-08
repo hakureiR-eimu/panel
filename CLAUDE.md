@@ -4,28 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-个人面板项目，包含三个独立后端服务和统一前端：
+个人面板项目，规划包含三个独立后端服务和统一前端，目前阶段已实现 nginx 静态资源服务：
 
-- **frontend/** — 前端应用，负责博客展示和量化面板 UI
-- **backend-blog/** — 博客后端服务（文章 CRUD、分类、标签等）
-- **backend-quant/** — 量化面板后端服务（策略数据、指标计算等）
-- **backend-embedding/** — 代码语义向量化搜索服务（代码片段向量化、语义检索等）
+- **static/** — 静态 HTML 页面（已部署，通过 nginx 直接提供服务）
 - **nginx/** — 反向代理配置，将请求路由到各服务
-- **docker-compose.yml** — 容器编排，统一管理所有服务的启动
+- **frontend/** — 前端应用（待开发）
+- **backend-blog/** — 博客后端服务（待开发）
+- **backend-quant/** — 量化面板后端服务（待开发）
+- **backend-embedding/** — 代码语义向量化搜索服务（待开发）
 
 ## 架构
 
 ```
-用户 → nginx(:80/:443) → frontend (静态资源)
-                         → backend-blog (:8000)
-                         → backend-quant (:8001)
-                         → backend-embedding (:8002)
+用户 → nginx(:8080→:80) → /static/*  → static/ (静态 HTML)
+                           (预留)
+                           → /api/blog/*    → backend-blog (:8000)
+                           → /api/quant/*   → backend-quant (:8001)
+                           → /api/embed/*   → backend-embedding (:8002)
 ```
 
-nginx 作为唯一入口，按路径前缀将请求分发到对应的后端服务。
+nginx 作为唯一入口，目前仅配置了 `/static/` 路径的静态资源服务。后端路由待各服务开发后再添加。
 
 ## 开发须知
 
-- 这是一个从零开始的项目，每一步都要解释清楚再做下一步
-- 做技术选型时先说明理由，再动手实现
-- 新增依赖或引入工具链时，说明它解决什么问题
+- **小步快跑**：不要一次性生成大量代码，每次只推进一个明确的步骤（如生成项目骨架、实现某个指定功能），完成后确认再继续下一步
