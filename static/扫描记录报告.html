@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12 服务器扫描记录报告</title>
+<style>
+  :root {
+    --bg: #fafbfc;
+    --card: #ffffff;
+    --border: #e1e4e8;
+    --text: #24292e;
+    --text-secondary: #586069;
+    --accent: #0366d6;
+    --accent-light: #f1f8ff;
+    --green: #28a745;
+    --green-light: #e6ffed;
+    --red: #d73a49;
+    --red-light: #ffeef0;
+    --orange: #e36209;
+    --orange-light: #fff8e5;
+    --purple: #6f42c1;
+    --purple-light: #f5f0ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .report-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border);
+  }
+  .report-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .report-header .meta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  /* Section */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+  }
+  .section h3 {
+    font-size: 1.1rem;
+    margin: 1rem 0 0.75rem;
+    color: var(--text);
+  }
+  .section p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+  }
+  .section ul {
+    margin: 0.5rem 0 0.5rem 1.5rem;
+    color: var(--text-secondary);
+  }
+  .section li { margin: 0.25rem 0; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #f6f8fa;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  td { color: var(--text-secondary); }
+  tr:hover td { background: var(--accent-light); }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-orange { background: var(--orange-light); color: var(--orange); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+  /* Stat cards */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 0.75rem 0;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-card .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    background: #e1e4e8;
+    border-radius: 4px;
+    height: 8px;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  /* Alert boxes */
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+  }
+  .alert-danger {
+    background: var(--red-light);
+    border-left: 4px solid var(--red);
+    color: var(--red);
+  }
+  .alert-warning {
+    background: var(--orange-light);
+    border-left: 4px solid var(--orange);
+    color: var(--orange);
+  }
+  .alert-info {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    color: var(--accent);
+  }
+
+  /* Language bar */
+  .lang-bar {
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 24px;
+    margin: 0.75rem 0;
+  }
+  .lang-bar div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* Comparison highlight */
+  .diff-positive { color: var(--green); font-weight: 600; }
+  .diff-negative { color: var(--red); font-weight: 600; }
+  .diff-neutral { color: var(--text-secondary); }
+
+  /* Footer */
+  .report-footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 1rem 0.5rem; }
+    .section { padding: 1rem; }
+    table { font-size: 0.8rem; }
+    th, td { padding: 0.4rem 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="report-header">
+    <h1>12 服务器扫描记录报告</h1>
+    <div class="meta">
+      服务器：10.176.44.12 &nbsp;·&nbsp; 扫描时间：2026-05-21 ~ 2026-06-03 &nbsp;·&nbsp; 数据库：MySQL 8.x
+    </div>
+  </div>
+
+  <!-- 1. 概述 -->
+  <div class="section">
+    <h2>1. 概述</h2>
+    <p>在 10.176.44.12 服务器上对 Linux 内核稳定版和 AOSP <code>platform_frameworks_base</code> 仓库进行了标识符追溯扫描，验证 CodeTracker v2 对 Java、C、C++ 三种语言的扫描能力，并记录性能基线。</p>
+    <p>本报告记录扫描配置、数据量、语言分布、扫描耗时、性能观察，并与历史扫描数据做对比。</p>
+  </div>
+
+  <!-- 2. 扫描配置 -->
+  <div class="section">
+    <h2>2. 扫描配置</h2>
+    <table>
+      <thead>
+        <tr><th>配置项</th><th>AOSP</th><th>Linux</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>扫描范围</td><td><code>c,h,java,cpp,hpp,cc,cxx,hxx</code></td><td>同左</td></tr>
+        <tr><td>仓库</td><td>platform_frameworks_base</td><td>linux-stable</td></tr>
+        <tr><td>子库</td><td>tracker_aosp_cpp_46534e27</td><td>tracker_linux_stable_20260602_6b707c98</td></tr>
+        <tr><td>Commit 时间跨度</td><td>2008-10 ~ 2025-03</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. AOSP 扫描结果 -->
+  <div class="section">
+    <h2>3. AOSP 扫描结果</h2>
+
+    <h3>3.1 数据量</h3>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">1,065,412</div>
+        <div class="stat-label">identifier</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">3,478,675</div>
+        <div class="stat-label">identifier_change</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">666,208</div>
+        <div class="stat-label">identifier_relation</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1,064,617</div>
+        <div class="stat-label">commit</div>
+      </div>
+    </div>
+
+    <h3>3.2 语言分布</h3>
+    <div class="lang-bar">
+      <div style="width:90.6%;background:#b07219;">JAVA 90.6%</div>
+      <div style="width:8%;background:#f34b7d;">CPP 8.0%</div>
+      <div style="width:1.3%;background:#555555;color:#ccc;font-size:0;">C</div>
+    </div>
+    <table>
+      <thead><tr><th>语言</th><th>标识符数</th><th>占比</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-orange">JAVA</span></td><td>965,999</td><td>90.6%</td></tr>
+        <tr><td><span class="badge badge-purple">CPP</span></td><td>85,207</td><td>8.0%</td></tr>
+        <tr><td><span class="badge" style="background:#eee;color:#555;">C</span></td><td>14,206</td><td>1.3%</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3 扫描阶段耗时</h3>
+    <table>
+      <thead><tr><th>阶段</th><th>处理条目</th><th>耗时</th></tr></thead>
+      <tbody>
+        <tr><td>预处理 + Commits入库</td><td>397,780</td><td>6m37s</td></tr>
+        <tr><td>初始提交标识符识别与存储</td><td>1,963</td><td>~1s</td></tr>
+        <tr><td>Commits扫描持久化</td><td>4,948,129</td><td>1h22m28s</td></tr>
+        <tr><td>大提交补扫</td><td>12</td><td>12s</td></tr>
+        <tr style="font-weight:600;color:var(--text);"><td>总计</td><td>—</td><td>约 1h29m</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.4 与历史扫描对比</h3>
+    <p>本次（Java+C+CPP）与上次扫描（Java+C）对比：</p>
+    <table>
+      <thead><tr><th>指标</th><th>上次扫描（c,java）</th><th>本次扫描（c,cpp,java）</th><th>差异</th></tr></thead>
+      <tbody>
+        <tr><td>identifier</td><td>966,344</td><td>1,065,412</td><td class="diff-positive">+99,068（新增 CPP 标识符）</td></tr>
+        <tr><td>identifier_change</td><td>3,145,893</td><td>3,478,675</td><td class="diff-positive">+332,782</td></tr>
+        <tr><td>identifier_relation</td><td>589,750</td><td>666,208</td><td class="diff-positive">+76,458</td></tr>
+        <tr><td>commit</td><td>1,064,617</td><td>1,064,617</td><td class="diff-neutral">相同</td></tr>
+        <tr><td>co_change_pair</td><td>1,376,521</td><td><span class="badge badge-red">失败（磁盘满）</span></td><td>—</td></tr>
+        <tr><td>CPP 标识符</td><td>0</td><td>85,207</td><td class="diff-positive">新增</td></tr>
+        <tr><td>扫描耗时</td><td>~1h19m</td><td>~1h29m</td><td class="diff-negative">+10m（因 CPP 标识符更多）</td></tr>
+      </tbody>
+    </table>
+    <div class="alert alert-info">
+      <strong>解读：</strong>扩展扫描范围至 CPP 后，新增 85,207 个 C++ 标识符（+8.0%），identifier_change 增加 10.6%。扫描耗时增加约 10 分钟，主要花在更多标识符的解析和匹配上。Commit 总数不变，说明两次扫描覆盖的是同一个仓库的同一批 commit。
+    </div>
+
+    <h3>3.5 Co-change 预计算</h3>
+    <ul>
+      <li>触发时间：2026-06-03 15:13</li>
+      <li><strong>结果：<span class="badge badge-red">失败</span></strong></li>
+      <li>失败原因：<code>java.sql.SQLException: The table 'physical_co_change_pair' is full</code>（磁盘空间不足）</li>
+      <li>崩溃前进度：处理了约 100,518 / 1,064,617 个 commit（13%），积累了 17,669,777 个共变对</li>
+      <li>已入库 13,392,786 行不完整数据</li>
+    </ul>
+    <div class="progress-bar">
+      <div class="fill" style="width:13%;background:var(--red);"></div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-secondary);">崩溃前进度：13%</p>
+    <div class="alert alert-danger">
+      <strong>后续：</strong>需清理磁盘空间后重新触发预计算。
+    </div>
+
+    <h3>3.6 性能异常：17 分钟无日志落盘</h3>
+    <div class="alert alert-warning">
+      扫描期间观察到 10:39 ~ 10:56 长达 <strong>17 分钟</strong>无日志记录落盘。
+      <br>CPU 利用率：96% &nbsp;|&nbsp; 内存：11%，稳定在 28.8G
+      <br>推测原因：可能是某个大 commit 的扫描处理时间过长，或日志缓冲区未及时刷新
+    </div>
+  </div>
+
+  <!-- 4. Linux 扫描结果 -->
+  <div class="section">
+    <h2>4. Linux 扫描结果</h2>
+
+    <h3>4.1 数据量</h3>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">10.4M</div>
+        <div class="stat-label">identifier（10,387,002）</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">16.2M</div>
+        <div class="stat-label">identifier_change（16,233,444）</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">2.4M</div>
+        <div class="stat-label">identifier_relation（2,434,998）</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1.4M</div>
+        <div class="stat-label">commit（1,445,862）</div>
+      </div>
+    </div>
+
+    <h3>4.2 语言分布</h3>
+    <div class="lang-bar">
+      <div style="width:99.998%;background:#555555;">C 99.998%</div>
+      <div style="width:0.002%;background:#f34b7d;font-size:0;"></div>
+    </div>
+    <table>
+      <thead><tr><th>语言</th><th>标识符数</th><th>占比</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge" style="background:#eee;color:#555;">C</span></td><td>10,386,784</td><td>99.998%</td></tr>
+        <tr><td><span class="badge badge-purple">CPP</span></td><td>218</td><td>0.002%</td></tr>
+      </tbody>
+    </table>
+    <p>Linux 内核是纯 C 项目，仅含极少量 CPP 标识符（218 个，多为构建脚本中的内联 C++）。</p>
+
+    <h3>4.3 扫描阶段耗时</h3>
+    <table>
+      <thead><tr><th>阶段</th><th>处理条目</th><th>耗时</th></tr></thead>
+      <tbody>
+        <tr><td>预处理</td><td>657,166</td><td>10m57s</td></tr>
+        <tr><td>初始提交标识符识别与存储</td><td>564,420</td><td>9m24s</td></tr>
+        <tr><td>Commits入库</td><td>657,164</td><td>10m57s</td></tr>
+        <tr><td>Commits扫描持久化</td><td>28,986,482</td><td>8h3m6s</td></tr>
+        <tr><td>大提交补扫</td><td>2,254,683</td><td>37m34s</td></tr>
+        <tr style="font-weight:600;color:var(--text);"><td>总计</td><td>—</td><td>约 8h51m</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.4 与历史扫描对比</h3>
+    <p>三次扫描对比：</p>
+    <table>
+      <thead><tr><th>指标</th><th>第 1 次（2026-04-29）</th><th>第 2 次（2026-05-21）</th><th>第 3 次（本次）</th></tr></thead>
+      <tbody>
+        <tr><td>identifier</td><td>9,573,093</td><td>9,572,229</td><td class="diff-positive">10,387,002</td></tr>
+        <tr><td>identifier_change</td><td>14,811,094</td><td>14,806,748</td><td class="diff-positive">16,233,444</td></tr>
+        <tr><td>identifier_relation</td><td>5,734,695</td><td>2,271,993</td><td>2,434,998</td></tr>
+        <tr><td>commit</td><td>1,266,122</td><td>1,266,122</td><td class="diff-positive">1,445,862</td></tr>
+        <tr><td>co_change_pair</td><td>27,867,880</td><td>0</td><td>—</td></tr>
+        <tr><td>耗时</td><td>~8h19m</td><td>~8h57m</td><td>~8h51m</td></tr>
+      </tbody>
+    </table>
+    <div class="alert alert-info">
+      <strong>解读：</strong><br>
+      1. <strong>commit 增长</strong>：本次扫描覆盖 1,445,862 个 commit，比前两次多 179,740 个（+14.2%），说明仓库拉取了更多历史。<br>
+      2. <strong>identifier 增长</strong>：+813,773（+8.5%），与 commit 增长一致。<br>
+      3. <strong>identifier_relation 骤降</strong>：第 1 次扫描有 5,734,695 条关系，第 2 次骤降到 2,271,993（-60.3%）。原因是中间版本对 cross-file relation 的识别策略做了调整（减少误识别），本次（2,434,998）与第 2 次基本一致。<br>
+      4. <strong>co_change_pair</strong>：仅第 1 次成功完成预计算（27,867,880 行），后续两次未触发或未完成。<br>
+      5. <strong>扫描效率稳定</strong>：三次扫描耗时均在 8h19m ~ 8h57m 之间，扫描效率没有退化。
+    </div>
+
+    <h3>4.5 大提交补扫</h3>
+    <p>Linux 扫描触发了大提交补扫（37m34s），处理了 2,254,683 条记录。这是因为 Linux 内核存在一些修改文件行数超阈值的大 commit，主扫描流程跳过后由补扫流程处理。</p>
+  </div>
+
+  <!-- 5. 总结 -->
+  <div class="section">
+    <h2>5. 总结</h2>
+
+    <h3>5.1 扫描能力验证</h3>
+    <table>
+      <thead><tr><th>能力</th><th>验证结果</th></tr></thead>
+      <tbody>
+        <tr><td>Java 标识符追溯</td><td>AOSP: 965,999 个标识符，正常 <span class="badge badge-green">通过</span></td></tr>
+        <tr><td>C 标识符追溯</td><td>Linux: 10,386,784 个，AOSP: 14,206 个，正常 <span class="badge badge-green">通过</span></td></tr>
+        <tr><td>C++ 标识符追溯</td><td>AOSP: 85,207 个，正常（本次新增） <span class="badge badge-green">通过</span></td></tr>
+        <tr><td>Co-change 预计算</td><td>Linux 历史成功（27,867,880 对），AOSP 因磁盘满失败 <span class="badge badge-red">失败</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 性能基线</h3>
+    <table>
+      <thead><tr><th>仓库</th><th>commit 数</th><th>标识符数</th><th>扫描耗时</th><th>吞吐量</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>AOSP (frameworks/base)</td>
+          <td>1,064,617</td>
+          <td>1,065,412</td>
+          <td>~1h29m</td>
+          <td><strong>~200 commits/s</strong></td>
+        </tr>
+        <tr>
+          <td>Linux (stable)</td>
+          <td>1,445,862</td>
+          <td>10,387,002</td>
+          <td>~8h51m</td>
+          <td><strong>~45 commits/s</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Linux 吞吐量低于 AOSP，原因是 Linux 的每个 commit 平均包含更多标识符变更（16.2M / 1.45M &asymp; 11.2 次/commit），且需要大提交补扫。</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="report-footer">
+    CodeTracker v2 &nbsp;·&nbsp; 扫描记录报告 &nbsp;·&nbsp; 2026-05-21 ~ 2026-06-03
+  </div>
+
+</div>
+</body>
+</html>
