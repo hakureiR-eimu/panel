@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>InputFlinger 跨仓库演化分析 · 综合报告</title>
+    <style>
+        body {
+            font-family: -apple-system, Segoe UI, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 0 24px;
+            color: #222;
+            line-height: 1.65
+        }
+
+        h1 {
+            border-bottom: 3px solid #1a73e8;
+            padding-bottom: 6px;
+            font-size: 26px
+        }
+
+        h2 {
+            border-left: 5px solid #1a73e8;
+            padding-left: 10px;
+            margin-top: 36px;
+            font-size: 21px
+        }
+
+        h3 {
+            margin-top: 24px;
+            color: #1a73e8;
+            font-size: 17px
+        }
+
+        h4 {
+            margin-top: 18px;
+            font-size: 15px;
+            color: #555
+        }
+
+        code, pre {
+            font-family: Consolas, Menlo, Monaco, monospace;
+            background: #f5f7fa;
+            border-radius: 4px
+        }
+
+        code {
+            padding: 1px 6px
+        }
+
+        pre {
+            padding: 10px 14px;
+            overflow-x: auto;
+            border: 1px solid #e2e6ee;
+            font-size: 12.5px;
+            line-height: 1.45
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13.5px;
+            width: 100%
+        }
+
+        th, td {
+            border: 1px solid #d9dde5;
+            padding: 6px 10px;
+            text-align: left;
+            vertical-align: top
+        }
+
+        th {
+            background: #eef2fa
+        }
+
+        tr:nth-child(even) td {
+            background: #fafbfd
+        }
+
+        .meta {
+            color: #666;
+            font-size: 13px;
+            margin-top: -12px
+        }
+
+        .note {
+            background: #fff4e0;
+            border-left: 4px solid #f4a300;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0
+        }
+
+        .smell {
+            background: #fdecec;
+            border-left: 4px solid #d93025;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0
+        }
+
+        .good {
+            background: #e8f5e9;
+            border-left: 4px solid #137333;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0
+        }
+
+        .hook {
+            background: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 15px
+        }
+
+        .bar {
+            display: inline-block;
+            background: #1a73e8;
+            height: 14px;
+            vertical-align: middle;
+            border-radius: 2px
+        }
+
+        .timeline {
+            border-left: 3px solid #1a73e8;
+            padding-left: 14px;
+            margin: 14px 0
+        }
+
+        .timeline .tl-item {
+            margin: 10px 0
+        }
+
+        .timeline .tl-year {
+            display: inline-block;
+            background: #1a73e8;
+            color: #fff;
+            border-radius: 3px;
+            padding: 1px 8px;
+            font-size: 12px;
+            margin-right: 6px;
+            min-width: 78px;
+            text-align: center
+        }
+
+        .small {
+            font-size: 12px;
+            color: #888
+        }
+
+        .quote {
+            background: #f0f3f8;
+            border-left: 3px solid #777;
+            padding: 8px 12px;
+            color: #333;
+            margin: 10px 0;
+            font-size: 13.5px
+        }
+
+        details {
+            margin: 8px 0
+        }
+
+        summary {
+            cursor: pointer;
+            color: #1a73e8;
+            font-weight: 600
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+            margin: 14px 0
+        }
+
+        .kpi {
+            background: #f5f7fa;
+            border: 1px solid #e2e6ee;
+            border-radius: 6px;
+            padding: 10px 14px
+        }
+
+        .kpi .num {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a73e8;
+            display: block;
+            line-height: 1.2
+        }
+
+        .kpi .lbl {
+            font-size: 12.5px;
+            color: #555;
+            margin-top: 2px;
+            display: block
+        }
+
+        .takeaway {
+            background: #fffbe6;
+            border: 1px dashed #e8c34d;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-size: 14px
+        }
+
+        .takeaway b {
+            color: #a07000
+        }
+
+        .svg-wrap {
+            margin: 14px 0;
+            overflow-x: auto
+        }
+
+        .layer1 {
+            background: #e6f4ea;
+            color: #137333;
+            border-radius: 3px;
+            padding: 0 5px;
+            font-size: 11.5px;
+            font-weight: 600
+        }
+
+        .layer2 {
+            background: #e8f0fe;
+            color: #1a73e8;
+            border-radius: 3px;
+            padding: 0 5px;
+            font-size: 11.5px;
+            font-weight: 600
+        }
+
+        .layer3 {
+            background: #fde7e1;
+            color: #a04200;
+            border-radius: 3px;
+            padding: 0 5px;
+            font-size: 11.5px;
+            font-weight: 600
+        }
+
+        .repo-tag {
+            display: inline-block;
+            background: #1a73e8;
+            color: #fff;
+            border-radius: 10px;
+            padding: 2px 10px;
+            font-size: 11px;
+            font-weight: 600
+        }
+
+        .repo-tag.native {
+            background: #137333
+        }
+
+        .repo-tag.java {
+            background: #e8a100
+        }
+
+        .flow-diagram {
+            background: #fafbfd;
+            border: 1px solid #e2e6ee;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 14px 0
+        }
+
+        .arch-box {
+            display: inline-block;
+            border: 2px solid;
+            border-radius: 6px;
+            padding: 8px 14px;
+            margin: 4px;
+            font-size: 13px;
+            text-align: center;
+            vertical-align: top
+        }
+
+        .arch-box.reader {
+            border-color: #1a73e8;
+            background: #e8f0fe
+        }
+
+        .arch-box.dispatcher {
+            border-color: #137333;
+            background: #e6f4ea
+        }
+
+        .arch-box.hub {
+            border-color: #e8a100;
+            background: #fff8e0
+        }
+
+        .arch-box.jni {
+            border-color: #9c27b0;
+            background: #f3e5f5
+        }
+
+        .arch-box.java {
+            border-color: #f44336;
+            background: #fdecec
+        }
+
+        .arrow {
+            display: inline-block;
+            color: #888;
+            font-size: 18px;
+            margin: 0 6px;
+            vertical-align: middle
+        }
+    </style>
+</head>
+<body>
+
+<h1>InputFlinger 跨仓库 14 年演化 · 综合报告</h1>
+<p class="meta">
+    数据库：<code>tracker_aosp_cpp_46534e27</code>（base）+ <code>tracker_aosp_native_20260609_8c2c6144</code>（native）·
+    数据快照：2026-06-09 · 研究范围：EventHub / InputReader / InputDispatcher / InputManagerService
+</p>
+
+<div class="hook">
+    <b>这份报告讲的是什么</b>：Android InputFlinger 是系统输入事件处理的核心子系统。我们追踪它 <b>跨两个 Git 仓库</b>（frameworks/base
+    → frameworks/native）的 14 年演化史，从标识符级别的 ADD/DELETE/MOVE 事件还原三次架构转折。所有结论按可信度三层标注：
+    <span class="layer2">层 2</span> CodeTracker v2 SQL 表（算法分析产物）+ <span class="layer3">层 3</span> commit
+    message / 源码推断。
+</div>
+
+<h2>0. 60 秒摄取</h2>
+
+<div class="kpi-grid">
+    <div class="kpi"><span class="num">14 年</span><span class="lbl">演化跨度（2011 → 2025）</span></div>
+    <div class="kpi"><span class="num">~40,000+</span><span class="lbl">跨仓库变更事件（不含格式变更）</span></div>
+    <div class="kpi"><span class="num">2 仓库</span><span class="lbl">frameworks/base + frameworks/native</span></div>
+    <div class="kpi"><span class="num">875</span><span class="lbl">CROSS_FILE_MOVE 事件（职责转移）</span></div>
+    <div class="kpi"><span class="num">2,530</span><span class="lbl">2019 年 FILE_DIR_CHANGE（大重构）</span></div>
+    <div class="kpi"><span class="num">~50+</span><span class="lbl">当前 InputFlinger 文件数</span></div>
+</div>
+
+<div class="takeaway">
+    <b>三句话总结</b>：
+    1. InputFlinger 经历了三次架构转折——2014 跨仓库迁出、2019 大拆分、2020-2024 能力扩展期。
+    2. v2 数据揭示的最反直觉发现：2019 年 InputReader.cpp 有 459 个标识符被迁出到 15+ 个 mapper 文件，从"万能读取器"变为
+    1,096 行的"薄协调层"。
+    3. 当前 InputDispatcher.cpp 仍有 7,335 行，是 InputFlinger 中最复杂的文件，后续拆分压力可能仍在此处。
+</div>
+
+<h2>1. 架构概览</h2>
+
+<p>InputFlinger 的数据流经四个层次，每个层次分布在不同的仓库和路径：</p>
+
+<div class="flow-diagram">
+    <div style="text-align:center;margin-bottom:12px">
+        <span class="arch-box hub" style="min-width:140px">EventHub.cpp<br><small>设备监听</small></span>
+        <span class="arrow">→</span>
+        <span class="arch-box reader" style="min-width:140px">InputReader.cpp<br><small>输入处理</small></span>
+        <span class="arrow">→</span>
+        <span class="arch-box dispatcher" style="min-width:140px">InputDispatcher.cpp<br><small>事件分发</small></span>
+        <span class="arrow">→</span>
+        <span class="arch-box jni" style="min-width:140px">InputManagerService.cpp<br><small>JNI 桥接</small></span>
+        <span class="arrow">→</span>
+        <span class="arch-box java" style="min-width:140px">InputManagerService.java<br><small>Java 框架</small></span>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#888">
+        <span class="repo-tag native">frameworks/native</span> ← EventHub / InputReader / InputDispatcher
+        &nbsp;&nbsp;
+        <span class="repo-tag">frameworks/base</span> ← InputManagerService (JNI + Java)
+    </div>
+</div>
+
+<h2>2. 跨仓库数据概览</h2>
+
+<h3>2.1 两库规模对比</h3>
+<table>
+    <tr>
+        <th>指标</th>
+        <th>frameworks/base</th>
+        <th>frameworks/native</th>
+    </tr>
+    <tr>
+        <td>标识符总数</td>
+        <td>1,065,412</td>
+        <td>83,637</td>
+    </tr>
+    <tr>
+        <td>变更事件数</td>
+        <td>3,478,675</td>
+        <td>291,221</td>
+    </tr>
+    <tr>
+        <td>Commit 数</td>
+        <td>1,064,617</td>
+        <td>126,370</td>
+    </tr>
+    <tr>
+        <td>CPP 标识符</td>
+        <td>85,207</td>
+        <td>70,808</td>
+    </tr>
+    <tr>
+        <td>JAVA 标识符</td>
+        <td>965,999</td>
+        <td>8,155</td>
+    </tr>
+    <tr>
+        <td>扫描耗时</td>
+        <td>~1h 29m</td>
+        <td>~14m 17s</td>
+    </tr>
+</table>
+
+<h3>2.2 InputFlinger 核心文件标识符分布</h3>
+
+<h4><span class="repo-tag">base</span> frameworks/base（历史数据 2011-2014）</h4>
+<table>
+    <tr>
+        <th>文件</th>
+        <th>路径</th>
+        <th>标识符数</th>
+    </tr>
+    <tr>
+        <td>InputManagerService.cpp</td>
+        <td>services/core/jni/</td>
+        <td>489</td>
+    </tr>
+    <tr>
+        <td>InputReader.cpp</td>
+        <td>services/input/ + libs/input/</td>
+        <td>418 + 294</td>
+    </tr>
+    <tr>
+        <td>InputDispatcher.cpp</td>
+        <td>services/input/ + libs/input/</td>
+        <td>296 + 188</td>
+    </tr>
+    <tr>
+        <td>EventHub.cpp</td>
+        <td>services/input/ + libs/input/</td>
+        <td>104 + 71</td>
+    </tr>
+    <tr>
+        <td>InputManagerService.java</td>
+        <td>services/core/java/</td>
+        <td>534</td>
+    </tr>
+</table>
+
+<h4><span class="repo-tag native">native</span> frameworks/native（2014-2025）</h4>
+<table>
+    <tr>
+        <th>文件</th>
+        <th>路径</th>
+        <th>标识符数</th>
+        <th>当前行数</th>
+    </tr>
+    <tr>
+        <td>InputDispatcher.cpp</td>
+        <td>dispatcher/</td>
+        <td>982</td>
+        <td>7,335</td>
+    </tr>
+    <tr>
+        <td>InputReader.cpp</td>
+        <td>reader/</td>
+        <td>439</td>
+        <td>1,096</td>
+    </tr>
+    <tr>
+        <td>InputReader.cpp</td>
+        <td>inputflinger/（旧路径）</td>
+        <td>412</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>EventHub.cpp</td>
+        <td>reader/</td>
+        <td>189</td>
+        <td>2,980</td>
+    </tr>
+    <tr>
+        <td>TouchInputMapper.cpp</td>
+        <td>reader/mapper/</td>
+        <td>156</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>InputListener.cpp</td>
+        <td>inputflinger/</td>
+        <td>100</td>
+        <td>—</td>
+    </tr>
+</table>
+
+<h2 id="d1">3. 阶段划分 · 跨仓库视角</h2>
+
+<div class="svg-wrap">
+    <svg height="400" style="background:#fafbfd;border:1px solid #e2e6ee;border-radius:6px" viewBox="0 0 1060 400" width="1060"
+         xmlns="http://www.w3.org/2000/svg">
+        <!-- 时间轴 -->
+        <line stroke="#1a73e8" stroke-width="3" x1="60" x2="1000" y1="300" y2="300"/>
+        <!-- 年份刻度 -->
+        <g fill="#666" font-family="-apple-system,Segoe UI,sans-serif" font-size="11" text-anchor="middle">
+            <line stroke="#1a73e8" stroke-width="2" x1="60" x2="60" y1="295" y2="305"/>
+            <text x="60" y="320">2011</text>
+            <line stroke="#aaa" stroke-width="1" x1="120" x2="120" y1="295" y2="305"/>
+            <text x="120" y="320">2012</text>
+            <line stroke="#aaa" stroke-width="1" x1="180" x2="180" y1="295" y2="305"/>
+            <text x="180" y="320">2013</text>
+            <line stroke="#1a73e8" stroke-width="2" x1="240" x2="240" y1="295" y2="305"/>
+            <text x="240" y="320">2014</text>
+            <line stroke="#aaa" stroke-width="1" x1="300" x2="300" y1="295" y2="305"/>
+            <text x="300" y="320">2015</text>
+            <line stroke="#aaa" stroke-width="1" x1="360" x2="360" y1="295" y2="305"/>
+            <text x="360" y="320">2016</text>
+            <line stroke="#aaa" stroke-width="1" x1="420" x2="420" y1="295" y2="305"/>
+            <text x="420" y="320">2017</text>
+            <line stroke="#1a73e8" stroke-width="2" x1="480" x2="480" y1="295" y2="305"/>
+            <text x="480" y="320">2018</text>
+            <line stroke="#d93025" stroke-width="3" x1="540" x2="540" y1="295" y2="305"/>
+            <text fill="#d93025" font-weight="bold" x="540" y="320">2019</text>
+            <line stroke="#aaa" stroke-width="1" x1="600" x2="600" y1="295" y2="305"/>
+            <text x="600" y="320">2020</text>
+            <line stroke="#aaa" stroke-width="1" x1="660" x2="660" y1="295" y2="305"/>
+            <text x="660" y="320">2021</text>
+            <line stroke="#aaa" stroke-width="1" x1="720" x2="720" y1="295" y2="305"/>
+            <text x="720" y="320">2022</text>
+            <line stroke="#aaa" stroke-width="1" x1="780" x2="780" y1="295" y2="305"/>
+            <text x="780" y="320">2023</text>
+            <line stroke="#aaa" stroke-width="1" x1="840" x2="840" y1="295" y2="305"/>
+            <text x="840" y="320">2024</text>
+        </g>
+        <!-- 仓库区间 -->
+        <rect fill="#1a73e8" fill-opacity="0.3" height="12" rx="3" width="190" x="55" y="278"/>
+        <text fill="#1a73e8" font-size="9" font-weight="bold" text-anchor="middle" x="150" y="288">frameworks/base
+        </text>
+        <rect fill="#137333" fill-opacity="0.3" height="12" rx="3" width="605" x="240" y="278"/>
+        <text fill="#137333" font-size="9" font-weight="bold" text-anchor="middle" x="540" y="288">frameworks/native
+        </text>
+        <!-- 阶段标记 -->
+        <circle cx="60" cy="260" fill="#1a73e8" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="60" y="264">1</text>
+        <circle cx="120" cy="260" fill="#1a73e8" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="120" y="264">2</text>
+        <circle cx="180" cy="260" fill="#1a73e8" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="180" y="264">3</text>
+        <circle cx="240" cy="260" fill="#d93025" r="12"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="240" y="264">4</text>
+        <circle cx="360" cy="260" fill="#137333" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="360" y="264">5</text>
+        <circle cx="480" cy="260" fill="#137333" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="480" y="264">6</text>
+        <circle cx="540" cy="260" fill="#d93025" r="12"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="540" y="264">7</text>
+        <circle cx="720" cy="260" fill="#137333" r="8"/>
+        <text fill="#fff" font-size="8" font-weight="bold" text-anchor="middle" x="720" y="264">8</text>
+        <!-- 阶段描述 -->
+        <g font-family="-apple-system,Segoe UI,sans-serif" font-size="10">
+            <text fill="#1a73e8" text-anchor="middle" x="60" y="248">初创</text>
+            <text fill="#1a73e8" text-anchor="middle" x="120" y="248">完善</text>
+            <text fill="#1a73e8" text-anchor="middle" x="180" y="248">模块化</text>
+            <text fill="#d93025" font-weight="bold" text-anchor="middle" x="240" y="245">跨仓库</text>
+            <text fill="#d93025" font-weight="bold" text-anchor="middle" x="240" y="235">迁出</text>
+            <text fill="#137333" text-anchor="middle" x="360" y="248">独立演化</text>
+            <text fill="#137333" text-anchor="middle" x="480" y="248">基类提取</text>
+            <text fill="#d93025" font-weight="bold" text-anchor="middle" x="540" y="245">大拆分</text>
+            <text fill="#d93025" font-weight="bold" text-anchor="middle" x="540" y="235">重构</text>
+            <text fill="#137333" text-anchor="middle" x="720" y="248">能力扩展期</text>
+        </g>
+        <!-- 年度事件柱状图（简化） -->
+        <g font-family="-apple-system,Segoe UI,sans-serif">
+            <text fill="#888" font-size="9" transform="rotate(-90,20,180)" x="20" y="180">变更事件数</text>
+            <!-- base 仓库柱（蓝色） -->
+            <rect fill="#1a73e8" fill-opacity="0.6" height="135" rx="2" width="16" x="50" y="165"/>
+            <rect fill="#1a73e8" fill-opacity="0.6" height="80" rx="2" width="16" x="110" y="220"/>
+            <rect fill="#1a73e8" fill-opacity="0.6" height="90" rx="2" width="16" x="170" y="210"/>
+            <rect fill="#1a73e8" fill-opacity="0.6" height="160" rx="2" width="16" x="230" y="140"/>
+            <!-- native 仓库柱（绿色） -->
+            <rect fill="#137333" fill-opacity="0.6" height="145" rx="2" width="16" x="248" y="155"/>
+            <rect fill="#137333" fill-opacity="0.6" height="70" rx="2" width="16" x="293" y="230"/>
+            <rect fill="#137333" fill-opacity="0.6" height="45" rx="2" width="16" x="353" y="255"/>
+            <rect fill="#137333" fill-opacity="0.6" height="100" rx="2" width="16" x="413" y="200"/>
+            <rect fill="#137333" fill-opacity="0.6" height="135" rx="2" width="16" x="473" y="165"/>
+            <rect fill="#d93025" fill-opacity="0.7" height="200" rx="2" width="16" x="533" y="100"/>
+            <rect fill="#137333" fill-opacity="0.6" height="155" rx="2" width="16" x="593" y="145"/>
+            <rect fill="#137333" fill-opacity="0.6" height="115" rx="2" width="16" x="653" y="185"/>
+            <rect fill="#137333" fill-opacity="0.6" height="145" rx="2" width="16" x="713" y="155"/>
+            <rect fill="#137333" fill-opacity="0.6" height="175" rx="2" width="16" x="773" y="125"/>
+            <rect fill="#137333" fill-opacity="0.6" height="155" rx="2" width="16" x="833" y="145"/>
+        </g>
+        <!-- 图例 -->
+        <g fill="#666" font-family="-apple-system,Segoe UI,sans-serif" font-size="11">
+            <rect fill="#1a73e8" fill-opacity="0.6" height="10" rx="2" width="12" x="870" y="20"/>
+            <text x="888" y="29">base 仓库</text>
+            <rect fill="#137333" fill-opacity="0.6" height="10" rx="2" width="12" x="870" y="38"/>
+            <text x="888" y="47">native 仓库</text>
+            <rect fill="#d93025" fill-opacity="0.7" height="10" rx="2" width="12" x="870" y="56"/>
+            <text x="888" y="65">关键拐点</text>
+        </g>
+    </svg>
+</div>
+
+<div class="timeline">
+    <div class="tl-item"><span class="tl-year">2011</span> <b>初创期</b> <span class="repo-tag">base</span> —
+        InputReader.cpp 贡献 999 次事件，从零构建输入系统。EventHub 从 InputDispatcher 抽取 InputWindow 职责（4 个
+        CROSS_FILE_MOVE）。
+    </div>
+    <div class="tl-item"><span class="tl-year">2012</span> <b>功能完善</b> <span class="repo-tag">base</span> —
+        InputManagerService.cpp（JNI）开始活跃。Java 层 InputManagerService.java 建立初始 API 体系。
+    </div>
+    <div class="tl-item"><span class="tl-year">2013</span> <b>模块化迁移</b> <span class="repo-tag">base</span> — 622 次
+        FILE_DIR_CHANGE，services/input/ → libs/input/，为独立仓库做准备。
+    </div>
+    <div class="tl-item"><span class="tl-year">2014</span> <b>跨仓库迁出</b> <span class="repo-tag">base</span>→<span
+            class="repo-tag native">native</span> — 1,779 次 base 事件（含大量 DELETE）+ native 开始有 2,314
+        次事件。InputFlinger 整体迁出。
+    </div>
+    <div class="tl-item"><span class="tl-year">2015-17</span> <b>独立演化</b> <span
+            class="repo-tag native">native</span> — 年均 ~250 事件，引入新能力。
+    </div>
+    <div class="tl-item"><span class="tl-year">2018</span> <b>基类提取</b> <span class="repo-tag native">native</span> —
+        InputReaderBase.cpp 抽取。InputWindow.cpp → libs/input/ 共享库。
+    </div>
+    <div class="tl-item"><span class="tl-year">2019</span> <b style="color:#d93025">大拆分重构</b> <span
+            class="repo-tag native">native</span> — 4,977 事件！2,530 次 FILE_DIR_CHANGE + 875 次
+        CROSS_FILE_MOVE。InputReader/InputDispatcher 拆分为 reader/ 和 dispatcher/ 子目录。
+    </div>
+    <div class="tl-item"><span class="tl-year">2020-25</span> <b>能力扩展期</b> <span
+            class="repo-tag native">native</span> — 年均 4,000+ 事件。新增
+        InputClassifier、MotionPredictor、PointerChoreographer、InputProcessor 等模块。
+    </div>
+</div>
+
+<h2 id="d2">4. 职责变化 · 深度分析</h2>
+
+<h3>4.1 InputReader.cpp：从"万能读取器"到"薄协调层"</h3>
+
+<div class="svg-wrap">
+    <svg height="180" style="background:#fafbfd;border:1px solid #e2e6ee;border-radius:6px" viewBox="0 0 1060 180" width="1060"
+         xmlns="http://www.w3.org/2000/svg">
+        <g font-family="-apple-system,Segoe UI,sans-serif">
+            <!-- 2011: 单体 -->
+            <rect fill="#1a73e8" fill-opacity="0.15" height="60" rx="6" stroke="#1a73e8" stroke-width="2" width="160" x="30"
+                  y="30"/>
+            <text font-size="13" font-weight="bold" text-anchor="middle" x="110" y="55">InputReader.cpp</text>
+            <text fill="#555" font-size="11" text-anchor="middle" x="110" y="75">触摸·键盘·鼠标·轨迹球·游戏手柄</text>
+            <text fill="#1a73e8" font-size="11" text-anchor="middle" x="110" y="105">2011: 418 标识符</text>
+            <!-- 箭头 -->
+            <text fill="#888" font-size="24" x="230" y="65">→</text>
+            <!-- 2019: 拆分后 -->
+            <rect fill="#e8f0fe" height="35" rx="4" stroke="#1a73e8" stroke-width="1.5" width="120" x="270" y="10"/>
+            <text font-size="11" font-weight="bold" text-anchor="middle" x="330" y="32">InputReader.cpp</text>
+            <text fill="#888" font-size="9" text-anchor="middle" x="330" y="48">1,096 行·薄协调层</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="420" y="5"/>
+            <text font-size="10" text-anchor="middle" x="485" y="22">TouchInputMapper.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="420" y="35"/>
+            <text font-size="10" text-anchor="middle" x="485" y="52">CursorInputMapper.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="420" y="65"/>
+            <text font-size="10" text-anchor="middle" x="485" y="82">KeyboardInputMapper.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="420" y="95"/>
+            <text font-size="10" text-anchor="middle" x="485" y="112">JoystickInputMapper.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="580" y="5"/>
+            <text font-size="10" text-anchor="middle" x="645" y="22">InputDevice.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="580" y="35"/>
+            <text font-size="10" text-anchor="middle" x="645" y="52">InputReaderBase.cpp</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="580" y="65"/>
+            <text font-size="10" text-anchor="middle" x="645" y="82">RotaryEncoderInputMapper</text>
+            <rect fill="#e6f4ea" height="25" rx="4" stroke="#137333" stroke-width="1" width="130" x="580" y="95"/>
+            <text font-size="10" text-anchor="middle" x="645" y="112">+ 更多 mapper/accumulator</text>
+            <!-- 箭头 -->
+            <line stroke="#137333" stroke-width="1.5" x1="390" x2="415" y1="30" y2="20"/>
+            <line stroke="#137333" stroke-width="1.5" x1="390" x2="415" y1="30" y2="45"/>
+            <line stroke="#137333" stroke-width="1.5" x1="390" x2="415" y1="30" y2="75"/>
+            <line stroke="#137333" stroke-width="1.5" x1="390" x2="415" y1="30" y2="105"/>
+            <text fill="#137333" font-size="11" font-weight="bold" x="415" y="140">2019 大拆分：459 标识符迁出</text>
+        </g>
+    </svg>
+</div>
+
+<h4>2019 年 InputReader 大拆分详情</h4>
+<table>
+    <tr>
+        <th>目标文件</th>
+        <th>迁出函数示例</th>
+        <th>职责</th>
+    </tr>
+    <tr>
+        <td>TouchInputMapper.cpp</td>
+        <td>abortTouches, process, sync, assignPointerIds, calculateCommonVector, applyExternalStylusTouchState</td>
+        <td>触摸输入映射</td>
+    </tr>
+    <tr>
+        <td>CursorInputMapper.cpp</td>
+        <td>CursorMotionAccumulator 相关</td>
+        <td>光标/鼠标映射</td>
+    </tr>
+    <tr>
+        <td>KeyboardInputMapper.cpp</td>
+        <td>键盘事件处理相关</td>
+        <td>键盘映射</td>
+    </tr>
+    <tr>
+        <td>JoystickInputMapper.cpp</td>
+        <td>addMotionRange</td>
+        <td>游戏手柄映射</td>
+    </tr>
+    <tr>
+        <td>InputDevice.cpp</td>
+        <td>addMapper, bumpGeneration, cancelTouch, cancelVibrate</td>
+        <td>设备管理</td>
+    </tr>
+    <tr>
+        <td>InputReaderBase.cpp</td>
+        <td>applyTo, dump, dumpViewport, threadLoop</td>
+        <td>基类方法（2018 提取）</td>
+    </tr>
+    <tr>
+        <td>SingleTouchMotionAccumulator.cpp</td>
+        <td>单点触摸累积</td>
+        <td>原始数据累积</td>
+    </tr>
+</table>
+
+<h3>4.2 InputDispatcher.cpp：从"单体分发"到"分层分发引擎"</h3>
+
+<table>
+    <tr>
+        <th>目标文件</th>
+        <th>迁出函数示例</th>
+        <th>职责</th>
+    </tr>
+    <tr>
+        <td>Entry.cpp</td>
+        <td>DispatchEntry, MotionEntry, KeyEntry, appendDescription</td>
+        <td>事件条目抽象</td>
+    </tr>
+    <tr>
+        <td>TouchState.cpp</td>
+        <td>addGestureMonitors, addOrUpdateWindow, addPortalWindow</td>
+        <td>触摸窗口状态</td>
+    </tr>
+    <tr>
+        <td>InputState.cpp</td>
+        <td>addKeyMemento, addMotionMemento, clear</td>
+        <td>输入消费状态</td>
+    </tr>
+    <tr>
+        <td>FocusResolver.cpp</td>
+        <td>焦点解析逻辑</td>
+        <td>焦点管理</td>
+    </tr>
+    <tr>
+        <td>LatencyTracker.cpp / LatencyAggregator.cpp</td>
+        <td>延迟追踪与聚合</td>
+        <td>性能监控</td>
+    </tr>
+</table>
+
+<div class="note">
+    <b>Dispatcher 仍是最复杂的文件</b>：即使经过 2019 年拆分，InputDispatcher.cpp 仍有 7,335 行、982
+    个标识符。核心分发逻辑（findTouchedWindowTargetsLocked 158 次变更、injectInputEvent 72 次）仍然集中在此文件中。
+</div>
+
+<h3>4.3 EventHub.cpp：最稳定的核心层</h3>
+<p>EventHub 在两个仓库中始终保持稳定的职责——通过 INotify + epoll 监听 <code>/dev/input/</code> 设备节点。从 base 的
+    104+71 标识符到 native 的 189 标识符（2,980 行），变更主要是跟随 Linux 内核接口和新设备类型支持。它是 InputFlinger
+    中<strong>职责从未发生本质变化</strong>的核心文件。</p>
+
+<h3>4.4 InputManagerService（JNI + Java）：永不停歇的桥接层</h3>
+
+<h4><span class="repo-tag">base</span> C++ JNI 层 · InputManagerService.cpp</h4>
+<p>从 2012 年活跃至今，2024 年仍有 56 个 commit。<code>register_android_server_InputManager</code> 函数累计变更 81 次——每次
+    Android 大版本更新都需要适配新的 native 方法注册。</p>
+
+<h4><span class="repo-tag java">Java</span> Java 层 · InputManagerService.java</h4>
+<table>
+    <tr>
+        <th>年</th>
+        <th>Commits</th>
+        <th>事件</th>
+        <th>ADD</th>
+        <th>DELETE</th>
+        <th>关键变化</th>
+    </tr>
+    <tr>
+        <td>2012</td>
+        <td>30</td>
+        <td>482</td>
+        <td>71</td>
+        <td>12</td>
+        <td>初始 API 体系建立</td>
+    </tr>
+    <tr>
+        <td>2014</td>
+        <td>108</td>
+        <td>957</td>
+        <td>163</td>
+        <td>26</td>
+        <td>跟随 native 迁出的 API 大适配</td>
+    </tr>
+    <tr>
+        <td>2016</td>
+        <td>41</td>
+        <td>245</td>
+        <td>33</td>
+        <td>10</td>
+        <td>权限管理增强</td>
+    </tr>
+    <tr>
+        <td>2020</td>
+        <td>64</td>
+        <td>409</td>
+        <td>80</td>
+        <td>10</td>
+        <td>InputFilter、权限管理</td>
+    </tr>
+    <tr>
+        <td>2022</td>
+        <td>74</td>
+        <td>596</td>
+        <td>101</td>
+        <td>36</td>
+        <td>输入捕获、手势导航</td>
+    </tr>
+    <tr>
+        <td>2024</td>
+        <td>110</td>
+        <td>567</td>
+        <td>91</td>
+        <td>38</td>
+        <td>设备配置新 API</td>
+    </tr>
+</table>
+
+<h2 id="d3">5. 新增能力追踪</h2>
+
+<table>
+    <tr>
+        <th>能力</th>
+        <th>年份</th>
+        <th>关键文件</th>
+        <th>说明</th>
+    </tr>
+    <tr>
+        <td>InputClassifier</td>
+        <td>2020</td>
+        <td>InputClassifier.cpp</td>
+        <td>将输入事件路由到 ML 分类器，实现输入事件的智能分类</td>
+    </tr>
+    <tr>
+        <td>PointerChoreographer</td>
+        <td>2021</td>
+        <td>PointerChoreographer.cpp（49,874 行）</td>
+        <td>统一管理指针光标显示和动画</td>
+    </tr>
+    <tr>
+        <td>MotionPredictor</td>
+        <td>2022</td>
+        <td>libs/input/MotionPredictor.cpp</td>
+        <td>基于历史轨迹预测触摸位置，降低延迟感知</td>
+    </tr>
+    <tr>
+        <td>InputProcessor</td>
+        <td>2023</td>
+        <td>InputProcessor.cpp（19,631 行）</td>
+        <td>整合分类、过滤、监控的流水线架构</td>
+    </tr>
+    <tr>
+        <td>TouchpadInputMapper</td>
+        <td>2022-23</td>
+        <td>reader/mapper/TouchpadInputMapper.cpp</td>
+        <td>触控板复杂手势识别（配合 GestureConverter）</td>
+    </tr>
+    <tr>
+        <td>InputDeviceMetricsCollector</td>
+        <td>2024</td>
+        <td>InputDeviceMetricsCollector.cpp</td>
+        <td>设备使用指标采集和上报</td>
+    </tr>
+    <tr>
+        <td>InputTracer (Perfetto)</td>
+        <td>2023</td>
+        <td>dispatcher/trace/</td>
+        <td>基于 Perfetto 的输入事件追踪</td>
+    </tr>
+    <tr>
+        <td>LatencyAggregatorWithHistograms</td>
+        <td>2023</td>
+        <td>dispatcher/LatencyAggregatorWithHistograms.cpp</td>
+        <td>直方图化的延迟聚合</td>
+    </tr>
+</table>
+
+<h2 id="d4">6. 变更类型分布</h2>
+
+<h3>6.1 native 仓库 InputFlinger 整体</h3>
+<table>
+    <tr>
+        <th>变更类型</th>
+        <th>次数</th>
+        <th>占比</th>
+        <th style="width:300px">分布</th>
+    </tr>
+    <tr>
+        <td>COMMON_BODY_CHANGE</td>
+        <td>13,479</td>
+        <td>46.3%</td>
+        <td><span class="bar" style="width:230px"></span></td>
+    </tr>
+    <tr>
+        <td>ADD</td>
+        <td>6,210</td>
+        <td>21.3%</td>
+        <td><span class="bar" style="width:106px"></span></td>
+    </tr>
+    <tr>
+        <td>DELETE</td>
+        <td>2,628</td>
+        <td>9.0%</td>
+        <td><span class="bar" style="width:45px"></span></td>
+    </tr>
+    <tr>
+        <td>COMMON_PARAM_CHANGE</td>
+        <td>1,965</td>
+        <td>6.8%</td>
+        <td><span class="bar" style="width:34px"></span></td>
+    </tr>
+    <tr>
+        <td>FILE_DIR_CHANGE</td>
+        <td>1,960</td>
+        <td>6.7%</td>
+        <td><span class="bar" style="width:33px"></span></td>
+    </tr>
+    <tr>
+        <td>LOGICAL_MODULE_CHANGE</td>
+        <td>1,866</td>
+        <td>6.4%</td>
+        <td><span class="bar" style="width:32px"></span></td>
+    </tr>
+    <tr>
+        <td>CROSS_FILE_MOVE</td>
+        <td>875</td>
+        <td>3.0%</td>
+        <td><span class="bar" style="width:15px"></span></td>
+    </tr>
+    <tr>
+        <td>IDENTIFIER_NAME_CHANGE</td>
+        <td>188</td>
+        <td>0.6%</td>
+        <td><span class="bar" style="width:3px"></span></td>
+    </tr>
+</table>
+
+<h3>6.2 Top 变更函数（排除测试）</h3>
+<table>
+    <tr>
+        <th>函数</th>
+        <th>文件</th>
+        <th>变更次数</th>
+        <th>特征</th>
+    </tr>
+    <tr>
+        <td>findTouchedWindowTargetsLocked</td>
+        <td>dispatcher/InputDispatcher.cpp</td>
+        <td>158</td>
+        <td>触摸目标查找，最复杂的分发逻辑</td>
+    </tr>
+    <tr>
+        <td>dumpDispatchStateLocked</td>
+        <td>dispatcher/InputDispatcher.cpp</td>
+        <td>81</td>
+        <td>状态 dump</td>
+    </tr>
+    <tr>
+        <td>dump</td>
+        <td>InputReader.cpp</td>
+        <td>80</td>
+        <td>读取器状态 dump</td>
+    </tr>
+    <tr>
+        <td>configure</td>
+        <td>InputReader.cpp</td>
+        <td>75</td>
+        <td>配置管理</td>
+    </tr>
+    <tr>
+        <td>injectInputEvent</td>
+        <td>dispatcher/InputDispatcher.cpp</td>
+        <td>72</td>
+        <td>事件注入</td>
+    </tr>
+    <tr>
+        <td>sync</td>
+        <td>InputReader.cpp</td>
+        <td>66</td>
+        <td>同步循环</td>
+    </tr>
+    <tr>
+        <td>notifyMotion</td>
+        <td>dispatcher/InputDispatcher.cpp</td>
+        <td>62</td>
+        <td>运动事件通知</td>
+    </tr>
+    <tr>
+        <td>process</td>
+        <td>InputReader.cpp</td>
+        <td>61</td>
+        <td>核心处理循环</td>
+    </tr>
+    <tr>
+        <td>enqueueDispatchEntryLocked</td>
+        <td>dispatcher/InputDispatcher.cpp</td>
+        <td>60</td>
+        <td>分发入队</td>
+    </tr>
+    <tr>
+        <td>reset</td>
+        <td>InputReader.cpp</td>
+        <td>57</td>
+        <td>状态重置</td>
+    </tr>
+</table>
+
+<h2>7. 总结与关键发现</h2>
+
+<div class="good">
+    <b>三次架构转折</b>
+    <ol>
+        <li><b>2014 跨仓库迁出</b>：从 frameworks/base 独立到 frameworks/native，Android 输入系统从"框架附属"变为"独立子系统"
+        </li>
+        <li><b>2019 大拆分</b>：InputReader 和 InputDispatcher 从单体巨石文件拆分为 reader/ 和 dispatcher/ 子目录，每个
+            mapper 类型独立成文件
+        </li>
+        <li><b>2020-2024 能力扩展</b>：在模块化架构基础上持续引入新能力——ML 分类、运动预测、触控板手势、Perfetto 追踪等</li>
+    </ol>
+</div>
+
+<div class="smell">
+    <b>持续关注点</b>
+    <ul>
+        <li><b>InputDispatcher.cpp 仍是最大文件</b>：7,335 行，核心分发逻辑高度集中，可能面临下一轮拆分压力</li>
+        <li><b>新能力引入节奏加速</b>：2020 年后年均新增标识符 600-950 个，远超 2015-2017 年的 50-80 个，需警惕新"巨石文件"形成
+        </li>
+    </ul>
+</div>
+
+<details>
+    <summary>数据来源 SQL（点击展开）</summary>
+    <pre>
+-- native 仓库扫描统计
+SELECT 'identifier' as tbl, COUNT(*) FROM identifier
+UNION ALL SELECT 'identifier_change', COUNT(*) FROM identifier_change
+UNION ALL SELECT 'commit', COUNT(*) FROM commit
+WHERE 1=1;  -- 在 tracker_aosp_native_20260609_8c2c6144 上执行
+
+-- 年度活跃度
+SELECT YEAR(c.commit_time) as yr, COUNT(DISTINCT ic.commit_id) as commits,
+  COUNT(*) as events, SUM(CASE WHEN ct.id=1 THEN 1 ELSE 0 END) as adds,
+  SUM(CASE WHEN ct.id=2 THEN 1 ELSE 0 END) as dels
+FROM identifier_change ic
+JOIN identifier i ON ic.identifier_id = i.hashed_uid
+JOIN commit c ON ic.commit_id = c.id
+JOIN change_type_dict ct ON ic.change_type_id = ct.id
+WHERE i.path LIKE 'services/inputflinger/%' AND ct.id NOT IN (19,28)
+GROUP BY yr ORDER BY yr;
+
+-- CROSS_FILE_MOVE 详情
+SELECT i.name, i.path as src, i2.path as dst, YEAR(c.commit_time) as yr
+FROM identifier_relation ir
+JOIN identifier i ON ir.src_identifier_id = i.hashed_uid
+JOIN identifier i2 ON ir.dst_identifier_id = i2.hashed_uid
+JOIN commit c ON ir.commit_id = c.id
+WHERE ir.change_type_id = 21
+  AND i.path LIKE 'services/inputflinger/%'
+ORDER BY yr, i.name;
+</pre>
+</details>
+
+<hr style="margin-top:36px;border:none;border-top:1px solid #e2e6ee">
+<p class="small">
+    由 CodeTracker v2 skill + 手动分析生成 · 数据库：tracker_aosp_cpp_46534e27 + tracker_aosp_native_20260609_8c2c6144 ·
+    本地源码：D:\work\linux-project\repos\AOSP + AOSP-native
+</p>
+
+</body>
+</html>
